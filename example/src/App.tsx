@@ -1,12 +1,10 @@
-import { Text, View, StyleSheet } from 'react-native';
-import { multiply } from 'react-native-ui-fretboard-component';
-
-const result = multiply(3, 7);
+import { View, StyleSheet } from 'react-native';
+import GuitarChordDiagram from 'react-native-ui-fretboard-component';
 
 export default function App() {
   return (
     <View style={styles.container}>
-      <Text>Result: {result}</Text>
+      <GuitarChordDiagram />
     </View>
   );
 }
