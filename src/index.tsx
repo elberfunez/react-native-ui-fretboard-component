@@ -1,4 +1,3 @@
-export { Fretboard } from './Fretboard';
 export { FretboardEnhanced } from './FretboardEnhanced';
 export type {
   FretboardProps,
