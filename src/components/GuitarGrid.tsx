@@ -73,6 +73,7 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
     fret: number;
     startString: number;
   } | null>(null);
+  const [startingFret, setStartingFret] = useState(1);
 
   const getDotKey = (dot: FingerPosition) => `${dot.string}-${dot.fret}`;
 
@@ -193,6 +194,16 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
     setBarres([]);
     setBarreInProgress(null);
     setStringStates(Array(numberOfStrings).fill('O'));
+    // Keep startingFret unchanged
+  };
+
+  const handleResetPress = () => {
+    setSelectedDots([]);
+    setFingerNumbers(new Map());
+    setBarres([]);
+    setBarreInProgress(null);
+    setStringStates(Array(numberOfStrings).fill('O'));
+    setStartingFret(1); // Reset to fret 1
   };
 
   // Detect chord based on current fretboard state
@@ -209,9 +220,12 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
         onAddBarres={handleAddBarresPress}
         isAddingBarres={isAddingBarres}
         onClear={handleClearPress}
+        startingFret={startingFret}
+        onStartingFretChange={setStartingFret}
+        onReset={handleResetPress}
       />
       <Svg
-        width={gridWidth}
+        width={gridWidth + 40 /* extra space for fret position label */}
         height={
           gridHeight +
           dotRadius * 4 /* extra space for string indicators + string numbers */
@@ -244,7 +258,7 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
               x2={gridWidth - HORIZONTAL_MARGIN}
               y2={y}
               stroke="black"
-              strokeWidth={i === 0 && showNut ? 8 : 2}
+              strokeWidth={i === 0 && showNut && startingFret === 1 ? 8 : 2}
             />
           );
         })}
@@ -252,15 +266,21 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
         {/* Barres (render before dots) */}
         {barres.map((barre, idx) => {
           const startX =
-            HORIZONTAL_MARGIN + (barre.startString - 1) * verticalSpacing;
+            HORIZONTAL_MARGIN +
+            (numberOfStrings - barre.startString) * verticalSpacing;
           const endX =
-            HORIZONTAL_MARGIN + (barre.endString - 1) * verticalSpacing;
-          const centerX = (startX + endX) / 2;
-          const width = Math.abs(endX - startX) + dotRadius * 2;
+            HORIZONTAL_MARGIN +
+            (numberOfStrings - barre.endString) * verticalSpacing;
+
+          // Ensure leftX is the leftmost position (smaller X value)
+          const leftX = Math.min(startX, endX);
+          const rightX = Math.max(startX, endX);
+          const centerX = (leftX + rightX) / 2;
+          const width = rightX - leftX + dotRadius * 2;
           const cy =
             VERTICAL_MARGIN +
             dotRadius +
-            (barre.fret - 0.5) * horizontalSpacing;
+            (barre.fret - startingFret + 0.5) * horizontalSpacing;
           const barreKey = getBarreKey(barre);
           const fingerNumber = fingerNumbers.get(barreKey);
 
@@ -268,7 +288,7 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
             <React.Fragment key={`barre-${idx}`}>
               {/* Rounded rectangle (capsule) for barre */}
               <Rect
-                x={startX - dotRadius}
+                x={leftX - dotRadius}
                 y={cy - dotRadius * 0.8}
                 width={width}
                 height={dotRadius * 1.6}
@@ -299,7 +319,7 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
           Array.from({ length: numberOfFrets }).map((_, f) => {
             const dot: FingerPosition = {
               string: numberOfStrings - s,
-              fret: f + 1,
+              fret: startingFret + f,
             };
             const cx = HORIZONTAL_MARGIN + s * verticalSpacing;
             const cy =
@@ -482,6 +502,20 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
             </React.Fragment>
           );
         })}
+
+        {/* Fret position label (only show when starting fret > 1) */}
+        {startingFret > 1 && (
+          <Text
+            x={gridWidth - HORIZONTAL_MARGIN + 10}
+            y={VERTICAL_MARGIN + dotRadius + 4}
+            fontSize={18}
+            fontWeight="bold"
+            fill="#333"
+            textAnchor="start"
+          >
+            {startingFret}fr
+          </Text>
+        )}
       </Svg>
     </View>
   );
