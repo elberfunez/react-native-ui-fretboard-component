@@ -1,12 +1,8 @@
-import React from 'react';
-import GuitarGrid from './components/GuitarGrid';
+// Main components
+export { default as GuitarFretboardEditor } from './components/GuitarFretboardEditor';
+export { default as GuitarFretboardDisplay } from './components/GuitarFretboardDisplay';
 
-const GuitarChordDiagram: React.FC = () => {
-  return (
-    <>
-      <GuitarGrid />
-    </>
-  );
-};
-
-export default GuitarChordDiagram;
+// Types
+export type { ChordData } from './types/ChordData';
+export type { FingerPosition } from './types/FingerPosition';
+export type { Barre } from './types/Barre';
