@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { View } from 'react-native';
-import Svg, { Line, Circle, Text, Rect } from 'react-native-svg';
+import Svg, { Line, Circle, Text, Rect, Ellipse } from 'react-native-svg';
 import type { FingerPosition } from '../types/FingerPosition';
+import type { Barre } from '../types/Barre';
 import GuitarGridEditorControls from './GuitarGridEditorControls';
 
 interface GuitarGridProps {
@@ -66,11 +67,59 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
     Array(numberOfStrings).fill('O') // Default to open strings
   );
   const [isEditingFingers, setIsEditingFingers] = useState(false);
+  const [barres, setBarres] = useState<Barre[]>([]);
+  const [barreInProgress, setBarreInProgress] = useState<{
+    fret: number;
+    startString: number;
+  } | null>(null);
 
   const getDotKey = (dot: FingerPosition) => `${dot.string}-${dot.fret}`;
 
+  const getBarreKey = (barre: Barre) =>
+    `barre-${barre.fret}-${barre.startString}-${barre.endString}`;
+
   const handleDotPress = (dot: FingerPosition) => {
-    if (isEditingFingers) {
+    if (isAddingBarres) {
+      // Barre mode: select start and end string on same fret
+      if (!barreInProgress) {
+        // First click: set start string and fret
+        setBarreInProgress({ fret: dot.fret, startString: dot.string });
+      } else if (barreInProgress.fret === dot.fret) {
+        // Second click on same fret: complete the barre
+        const startString = Math.min(barreInProgress.startString, dot.string);
+        const endString = Math.max(barreInProgress.startString, dot.string);
+
+        const newBarre: Barre = {
+          fret: dot.fret,
+          startString,
+          endString,
+        };
+
+        setBarres((prev) => [...prev, newBarre]);
+
+        // Add all dots in the barre to selectedDots
+        const barreDots: FingerPosition[] = [];
+        for (let s = startString; s <= endString; s++) {
+          barreDots.push({ string: s, fret: dot.fret });
+        }
+        setSelectedDots((prev) => {
+          const filtered = prev.filter(
+            (d) =>
+              !(
+                d.fret === dot.fret &&
+                d.string >= startString &&
+                d.string <= endString
+              )
+          );
+          return [...filtered, ...barreDots];
+        });
+
+        setBarreInProgress(null);
+      } else {
+        // Clicked on different fret: reset and start new barre
+        setBarreInProgress({ fret: dot.fret, startString: dot.string });
+      }
+    } else if (isEditingFingers) {
       // In edit mode, cycle finger numbers 1-4, then remove
       const key = getDotKey(dot);
       setFingerNumbers((prev) => {
@@ -130,13 +179,41 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
 
   const handleEditFingersPress = () => {
     setIsEditingFingers(!isEditingFingers);
+    // Disable other modes when enabling this mode
+    if (!isEditingFingers) {
+      setIsAddingBarres(false);
+      setBarreInProgress(null);
+    }
+  };
+
+  const [isAddingBarres, setIsAddingBarres] = useState(false);
+
+  const handleAddBarresPress = () => {
+    setIsAddingBarres(!isAddingBarres);
+    // Disable other modes when enabling this mode
+    if (!isAddingBarres) {
+      setIsEditingFingers(false);
+    }
+    // Reset barre in progress when toggling mode
+    setBarreInProgress(null);
+  };
+
+  const handleClearPress = () => {
+    setSelectedDots([]);
+    setFingerNumbers(new Map());
+    setBarres([]);
+    setBarreInProgress(null);
+    setStringStates(Array(numberOfStrings).fill('O'));
   };
 
   return (
-    <View>
+    <View style={{ alignItems: 'center' }}>
       <GuitarGridEditorControls
         onEditFingers={handleEditFingersPress}
         isEditingFingers={isEditingFingers}
+        onAddBarres={handleAddBarresPress}
+        isAddingBarres={isAddingBarres}
+        onClear={handleClearPress}
       />
       <Svg
         width={gridWidth}
@@ -177,6 +254,82 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
           );
         })}
 
+        {/* Barres (render before dots) */}
+        {barres.map((barre, idx) => {
+          const startX =
+            HORIZONTAL_MARGIN + (barre.startString - 1) * verticalSpacing;
+          const endX =
+            HORIZONTAL_MARGIN + (barre.endString - 1) * verticalSpacing;
+          const centerX = (startX + endX) / 2;
+          const width = Math.abs(endX - startX) + dotRadius * 2;
+          const cy =
+            VERTICAL_MARGIN +
+            dotRadius +
+            (barre.fret - 0.5) * horizontalSpacing;
+          const barreKey = getBarreKey(barre);
+          const fingerNumber = fingerNumbers.get(barreKey);
+
+          return (
+            <React.Fragment key={`barre-${idx}`}>
+              <Ellipse
+                cx={centerX}
+                cy={cy}
+                rx={width / 2}
+                ry={dotRadius}
+                fill="black"
+                onPress={() => {
+                  if (isEditingFingers) {
+                    // Cycle finger numbers for barre
+                    setFingerNumbers((prev) => {
+                      const newMap = new Map(prev);
+                      const current = newMap.get(barreKey) || 0;
+                      if (current >= 4) {
+                        newMap.delete(barreKey);
+                      } else {
+                        newMap.set(barreKey, current + 1);
+                      }
+                      return newMap;
+                    });
+                  }
+                }}
+              />
+              {/* Show finger number on barre */}
+              {fingerNumber && (
+                <Text
+                  x={centerX}
+                  y={cy + dotRadius * 0.4}
+                  fontSize={dotRadius * 1.3}
+                  fontWeight="bold"
+                  fill="white"
+                  textAnchor="middle"
+                  pointerEvents="none"
+                >
+                  {fingerNumber}
+                </Text>
+              )}
+            </React.Fragment>
+          );
+        })}
+
+        {/* Highlight for barre in progress */}
+        {barreInProgress && (
+          <Circle
+            cx={
+              HORIZONTAL_MARGIN +
+              (barreInProgress.startString - 1) * verticalSpacing
+            }
+            cy={
+              VERTICAL_MARGIN +
+              dotRadius +
+              (barreInProgress.fret - 0.5) * horizontalSpacing
+            }
+            r={dotRadius * 1.2}
+            fill="none"
+            stroke="blue"
+            strokeWidth={2}
+          />
+        )}
+
         {/* Clickable dots */}
         {Array.from({ length: numberOfStrings }).map((__, s) =>
           Array.from({ length: numberOfFrets }).map((_, f) => {
@@ -187,18 +340,32 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
             const dotKey = getDotKey(dot);
             const fingerNumber = fingerNumbers.get(dotKey);
 
+            // Check if this dot is part of a barre
+            const isPartOfBarre = barres.some(
+              (b) =>
+                b.fret === dot.fret &&
+                dot.string >= b.startString &&
+                dot.string <= b.endString
+            );
+
             return (
               <React.Fragment key={`dot-${s}-${f}`}>
                 <Circle
                   cx={cx}
                   cy={cy}
                   r={dotRadius}
-                  fill={isSelected(dot) ? 'black' : 'transparent'}
+                  fill={
+                    isPartOfBarre
+                      ? 'transparent'
+                      : isSelected(dot)
+                        ? 'black'
+                        : 'transparent'
+                  }
                   stroke="none"
                   onPress={() => handleDotPress(dot)}
                 />
-                {/* Show finger number if assigned */}
-                {fingerNumber && (
+                {/* Show finger number if assigned and not part of barre */}
+                {fingerNumber && !isPartOfBarre && (
                   <Text
                     x={cx}
                     y={cy + dotRadius * 0.4}
