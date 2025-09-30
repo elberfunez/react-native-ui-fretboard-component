@@ -2,24 +2,16 @@ import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 
 interface GuitarGridEditorControlsProps {
-  isEditingFingers?: boolean;
-  onEditFingers?: () => void;
   isAddingBarres?: boolean;
   onAddBarres?: () => void;
   onClear?: () => void;
 }
 
 const GuitarGridEditorControls: React.FC<GuitarGridEditorControlsProps> = ({
-  isEditingFingers = false,
-  onEditFingers = () => console.log('Edit Fingers pressed'),
   isAddingBarres = false,
   onAddBarres = () => console.log('Add Barres pressed'),
   onClear = () => console.log('Clear pressed'),
 }) => {
-  const handleEditFingersPress = () => {
-    onEditFingers();
-  };
-
   const handleAddBarresPress = () => {
     onAddBarres();
   };
@@ -38,19 +30,6 @@ const GuitarGridEditorControls: React.FC<GuitarGridEditorControlsProps> = ({
           style={[styles.buttonText, isAddingBarres && styles.activeButtonText]}
         >
           {isAddingBarres ? 'Done' : 'Add Barres'}
-        </Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.button, isEditingFingers && styles.activeButton]}
-        onPress={handleEditFingersPress}
-      >
-        <Text
-          style={[
-            styles.buttonText,
-            isEditingFingers && styles.activeButtonText,
-          ]}
-        >
-          {isEditingFingers ? 'Done' : 'Edit Fingers'}
         </Text>
       </TouchableOpacity>
       <TouchableOpacity

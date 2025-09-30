@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { View } from 'react-native';
-import Svg, { Line, Circle, Text, Rect, Ellipse } from 'react-native-svg';
+import Svg, { Line, Circle, Text, Rect } from 'react-native-svg';
 import type { FingerPosition } from '../types/FingerPosition';
 import type { Barre } from '../types/Barre';
 import GuitarGridEditorControls from './GuitarGridEditorControls';
@@ -66,7 +66,6 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
   const [stringStates, setStringStates] = useState<Array<'X' | 'O'>>(
     Array(numberOfStrings).fill('O') // Default to open strings
   );
-  const [isEditingFingers, setIsEditingFingers] = useState(false);
   const [barres, setBarres] = useState<Barre[]>([]);
   const [barreInProgress, setBarreInProgress] = useState<{
     fret: number;
@@ -114,50 +113,51 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
           return [...filtered, ...barreDots];
         });
 
+        // Assign finger number 1 by default to new barre
+        const barreKey = getBarreKey(newBarre);
+        setFingerNumbers((prev) => {
+          const newMap = new Map(prev);
+          newMap.set(barreKey, 1);
+          return newMap;
+        });
+
         setBarreInProgress(null);
       } else {
         // Clicked on different fret: reset and start new barre
         setBarreInProgress({ fret: dot.fret, startString: dot.string });
       }
-    } else if (isEditingFingers) {
-      // In edit mode, cycle finger numbers 1-4, then remove
-      const key = getDotKey(dot);
-      setFingerNumbers((prev) => {
-        const newMap = new Map(prev);
-        const current = newMap.get(key) || 0;
-        if (current >= 4) {
-          newMap.delete(key);
-        } else {
-          newMap.set(key, current + 1);
-        }
-        return newMap;
-      });
-
-      // Make sure the dot is selected if assigning a finger number
-      if (!isSelected(dot) && (fingerNumbers.get(key) || 0) < 4) {
-        setSelectedDots((prev) => [...prev, dot]);
-      }
     } else {
-      // Normal mode: toggle dot selection
-      setSelectedDots((prev) => {
-        const exists = prev.some(
-          (d) => d.string === dot.string && d.fret === dot.fret
-        );
-        if (exists) {
-          // Remove finger number when removing dot
-          const key = getDotKey(dot);
-          setFingerNumbers((prevNumbers) => {
-            const newMap = new Map(prevNumbers);
+      // Normal mode: cycle finger numbers 1-4, then remove dot
+      const key = getDotKey(dot);
+      const exists = isSelected(dot);
+
+      if (exists) {
+        // Dot exists - cycle finger number
+        setFingerNumbers((prev) => {
+          const newMap = new Map(prev);
+          const current = newMap.get(key) || 0;
+          if (current >= 4) {
+            // Remove dot and finger number
             newMap.delete(key);
-            return newMap;
-          });
-          return prev.filter(
-            (d) => !(d.string === dot.string && d.fret === dot.fret)
-          );
-        } else {
-          return [...prev, dot];
-        }
-      });
+            setSelectedDots((prevDots) =>
+              prevDots.filter(
+                (d) => !(d.string === dot.string && d.fret === dot.fret)
+              )
+            );
+          } else {
+            newMap.set(key, current + 1);
+          }
+          return newMap;
+        });
+      } else {
+        // New dot - add it with finger number 1
+        setSelectedDots((prev) => [...prev, dot]);
+        setFingerNumbers((prev) => {
+          const newMap = new Map(prev);
+          newMap.set(key, 1);
+          return newMap;
+        });
+      }
     }
   };
 
@@ -177,23 +177,10 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
   const isSelected = (dot: FingerPosition) =>
     selectedDots.some((d) => d.string === dot.string && d.fret === dot.fret);
 
-  const handleEditFingersPress = () => {
-    setIsEditingFingers(!isEditingFingers);
-    // Disable other modes when enabling this mode
-    if (!isEditingFingers) {
-      setIsAddingBarres(false);
-      setBarreInProgress(null);
-    }
-  };
-
   const [isAddingBarres, setIsAddingBarres] = useState(false);
 
   const handleAddBarresPress = () => {
     setIsAddingBarres(!isAddingBarres);
-    // Disable other modes when enabling this mode
-    if (!isAddingBarres) {
-      setIsEditingFingers(false);
-    }
     // Reset barre in progress when toggling mode
     setBarreInProgress(null);
   };
@@ -209,8 +196,6 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
   return (
     <View style={{ alignItems: 'center' }}>
       <GuitarGridEditorControls
-        onEditFingers={handleEditFingersPress}
-        isEditingFingers={isEditingFingers}
         onAddBarres={handleAddBarresPress}
         isAddingBarres={isAddingBarres}
         onClear={handleClearPress}
@@ -271,27 +256,15 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
 
           return (
             <React.Fragment key={`barre-${idx}`}>
-              <Ellipse
-                cx={centerX}
-                cy={cy}
-                rx={width / 2}
-                ry={dotRadius}
+              {/* Rounded rectangle (capsule) for barre */}
+              <Rect
+                x={startX - dotRadius}
+                y={cy - dotRadius * 0.8}
+                width={width}
+                height={dotRadius * 1.6}
+                rx={dotRadius * 0.8}
+                ry={dotRadius * 0.8}
                 fill="black"
-                onPress={() => {
-                  if (isEditingFingers) {
-                    // Cycle finger numbers for barre
-                    setFingerNumbers((prev) => {
-                      const newMap = new Map(prev);
-                      const current = newMap.get(barreKey) || 0;
-                      if (current >= 4) {
-                        newMap.delete(barreKey);
-                      } else {
-                        newMap.set(barreKey, current + 1);
-                      }
-                      return newMap;
-                    });
-                  }
-                }}
               />
               {/* Show finger number on barre */}
               {fingerNumber && (
@@ -341,12 +314,47 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
             const fingerNumber = fingerNumbers.get(dotKey);
 
             // Check if this dot is part of a barre
-            const isPartOfBarre = barres.some(
+            const barreThatIncludesDot = barres.find(
               (b) =>
                 b.fret === dot.fret &&
                 dot.string >= b.startString &&
                 dot.string <= b.endString
             );
+
+            const handleDotOrBarrePress = () => {
+              if (barreThatIncludesDot) {
+                // This dot is part of a barre - cycle the barre number
+                const barreKey = getBarreKey(barreThatIncludesDot);
+                setFingerNumbers((prev) => {
+                  const newMap = new Map(prev);
+                  const current = newMap.get(barreKey) || 0;
+                  if (current >= 4) {
+                    // Remove barre
+                    newMap.delete(barreKey);
+                    setBarres((prevBarres) =>
+                      prevBarres.filter((b) => getBarreKey(b) !== barreKey)
+                    );
+                    // Remove dots from barre
+                    setSelectedDots((prevDots) =>
+                      prevDots.filter(
+                        (d) =>
+                          !(
+                            d.fret === barreThatIncludesDot.fret &&
+                            d.string >= barreThatIncludesDot.startString &&
+                            d.string <= barreThatIncludesDot.endString
+                          )
+                      )
+                    );
+                  } else {
+                    newMap.set(barreKey, current + 1);
+                  }
+                  return newMap;
+                });
+              } else {
+                // Normal dot press
+                handleDotPress(dot);
+              }
+            };
 
             return (
               <React.Fragment key={`dot-${s}-${f}`}>
@@ -355,17 +363,17 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
                   cy={cy}
                   r={dotRadius}
                   fill={
-                    isPartOfBarre
+                    barreThatIncludesDot
                       ? 'transparent'
                       : isSelected(dot)
                         ? 'black'
                         : 'transparent'
                   }
                   stroke="none"
-                  onPress={() => handleDotPress(dot)}
+                  onPress={handleDotOrBarrePress}
                 />
                 {/* Show finger number if assigned and not part of barre */}
-                {fingerNumber && !isPartOfBarre && (
+                {fingerNumber && !barreThatIncludesDot && (
                   <Text
                     x={cx}
                     y={cy + dotRadius * 0.4}
