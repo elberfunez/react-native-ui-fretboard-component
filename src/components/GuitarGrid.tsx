@@ -40,7 +40,7 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
   } = config;
 
   const HORIZONTAL_MARGIN = dotRadius;
-  const VERTICAL_MARGIN = dotRadius;
+  const VERTICAL_MARGIN = dotRadius * 3; // Extra space for string indicators
 
   const { verticalSpacing, horizontalSpacing } = useMemo(
     () => ({
@@ -149,46 +149,33 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
                 cx={cx}
                 cy={cy}
                 r={dotRadius}
-                fill={isSelected(dot) ? 'blue' : 'transparent'}
-                stroke={isSelected(dot) ? 'black' : 'none'}
+                fill={isSelected(dot) ? 'black' : 'transparent'}
+                stroke="none"
                 onPress={() => handleDotPress(dot)}
               />
             );
           })
         )}
 
-        {/* String indicators (just big O or X characters) */}
+        {/* String indicators (circles for O, X text for muted) */}
         {Array.from({ length: numberOfStrings }).map((_, s) => {
           const x = HORIZONTAL_MARGIN + s * verticalSpacing;
-          const y = VERTICAL_MARGIN / 2; // above the nut
+          const y = VERTICAL_MARGIN - dotRadius; // above the nut with more space
           const state = stringStates[s];
 
           return (
             <React.Fragment key={`string-state-${s}`}>
-              {/* Invisible clickable area */}
+              {/* Larger clickable area */}
               <Circle
                 cx={x}
                 cy={y}
-                r={dotRadius}
+                r={dotRadius * 1.2}
                 fill="transparent"
                 onPress={() => toggleStringState(s)}
               />
 
-              {/* Show X or O based on state */}
+              {/* Show X or circle based on state */}
               {state === 'X' && (
-                <Text
-                  x={x}
-                  y={y + 6}
-                  fontSize={dotRadius * 1.5}
-                  fontWeight="bold"
-                  fill="red"
-                  textAnchor="middle"
-                >
-                  X
-                </Text>
-              )}
-
-              {state === 'O' && (
                 <Text
                   x={x}
                   y={y + 6}
@@ -196,9 +183,22 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
                   fontWeight="bold"
                   fill="black"
                   textAnchor="middle"
+                  pointerEvents="none"
                 >
-                  O
+                  X
                 </Text>
+              )}
+
+              {state === 'O' && (
+                <Circle
+                  cx={x}
+                  cy={y}
+                  r={dotRadius * 0.6}
+                  fill="white"
+                  stroke="black"
+                  strokeWidth={2}
+                  pointerEvents="none"
+                />
               )}
             </React.Fragment>
           );
