@@ -152,6 +152,7 @@
     "version": "0.54.3"
   },
   "dependencies": {
+    "@tonaljs/chord-detect": "^4.9.1",
     "react-native-svg": "^15.13.0"
   }
 }
