@@ -2,32 +2,41 @@ import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 
 interface GuitarGridEditorControlsProps {
-  isEditingFingers?: boolean;
-  onEditFingers?: () => void;
+  isAddingBarres?: boolean;
+  onAddBarres?: () => void;
+  onClear?: () => void;
 }
 
 const GuitarGridEditorControls: React.FC<GuitarGridEditorControlsProps> = ({
-  isEditingFingers = false,
-  onEditFingers = () => console.log('Edit Fingers pressed'),
+  isAddingBarres = false,
+  onAddBarres = () => console.log('Add Barres pressed'),
+  onClear = () => console.log('Clear pressed'),
 }) => {
-  const handlePress = () => {
-    onEditFingers();
+  const handleAddBarresPress = () => {
+    onAddBarres();
+  };
+
+  const handleClearPress = () => {
+    onClear();
   };
 
   return (
     <View style={styles.container}>
       <TouchableOpacity
-        style={[styles.button, isEditingFingers && styles.activeButton]}
-        onPress={handlePress}
+        style={[styles.button, isAddingBarres && styles.activeButton]}
+        onPress={handleAddBarresPress}
       >
         <Text
-          style={[
-            styles.buttonText,
-            isEditingFingers && styles.activeButtonText,
-          ]}
+          style={[styles.buttonText, isAddingBarres && styles.activeButtonText]}
         >
-          {isEditingFingers ? 'Done' : 'Edit Fingers'}
+          {isAddingBarres ? 'Done' : 'Add Barres'}
         </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.button, styles.clearButton]}
+        onPress={handleClearPress}
+      >
+        <Text style={[styles.buttonText, styles.clearButtonText]}>Clear</Text>
       </TouchableOpacity>
     </View>
   );
@@ -37,7 +46,9 @@ const styles = StyleSheet.create({
   container: {
     paddingVertical: 16,
     paddingHorizontal: 8,
-    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
   },
   button: {
     paddingVertical: 12,
@@ -60,6 +71,12 @@ const styles = StyleSheet.create({
   },
   activeButtonText: {
     color: 'white',
+  },
+  clearButton: {
+    borderColor: '#dc3545',
+  },
+  clearButtonText: {
+    color: '#dc3545',
   },
 });
 
