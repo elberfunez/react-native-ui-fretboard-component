@@ -14,6 +14,8 @@ interface GuitarGridEditorControlsProps {
   startingFret?: number;
   onStartingFretChange?: (fret: number) => void;
   onReset?: () => void;
+  onShiftUp?: () => void;
+  onShiftDown?: () => void;
 }
 
 const GuitarGridEditorControls: React.FC<GuitarGridEditorControlsProps> = ({
@@ -23,6 +25,8 @@ const GuitarGridEditorControls: React.FC<GuitarGridEditorControlsProps> = ({
   startingFret = 1,
   onStartingFretChange = () => console.log('Starting fret changed'),
   onReset = () => console.log('Reset pressed'),
+  onShiftUp = () => console.log('Shift Up pressed'),
+  onShiftDown = () => console.log('Shift Down pressed'),
 }) => {
   const handleAddBarresPress = () => {
     onAddBarres();
@@ -118,6 +122,19 @@ const GuitarGridEditorControls: React.FC<GuitarGridEditorControlsProps> = ({
         >
           <Text style={[styles.buttonText, styles.resetButtonText]}>Reset</Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Shift Chord Shape Controls */}
+      <View style={styles.shiftControlContainer}>
+        <Text style={styles.shiftLabel}>Move Shape:</Text>
+        <View style={styles.shiftButtonContainer}>
+          <TouchableOpacity style={styles.shiftButton} onPress={onShiftDown}>
+            <Text style={styles.shiftButtonText}>↓ Down</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.shiftButton} onPress={onShiftUp}>
+            <Text style={styles.shiftButtonText}>↑ Up</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -215,6 +232,37 @@ const styles = StyleSheet.create({
   },
   resetButtonText: {
     color: '#ff8c00',
+  },
+  shiftControlContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+  },
+  shiftLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginRight: 12,
+  },
+  shiftButtonContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  shiftButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#28a745',
+    backgroundColor: 'white',
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  shiftButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#28a745',
   },
 });
 

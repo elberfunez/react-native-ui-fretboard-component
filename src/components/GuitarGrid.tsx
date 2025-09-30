@@ -15,6 +15,7 @@ interface GuitarGridProps {
   showNut?: boolean;
   dotRadius?: number; // tappable area for dots and indicators
   isEditingFingers?: boolean;
+  showFretMarkers?: boolean; // show traditional fret markers (dots on frets 3, 5, 7, 9, 12, etc.)
 }
 
 const DEFAULT_GRID_CONFIG: Required<GuitarGridProps> = {
@@ -25,6 +26,7 @@ const DEFAULT_GRID_CONFIG: Required<GuitarGridProps> = {
   showNut: true,
   dotRadius: 12,
   isEditingFingers: false,
+  showFretMarkers: true,
 };
 
 const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
@@ -40,6 +42,7 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
     gridHeight,
     showNut,
     dotRadius,
+    showFretMarkers,
   } = config;
 
   const HORIZONTAL_MARGIN = dotRadius;
@@ -206,6 +209,113 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
     setStartingFret(1); // Reset to fret 1
   };
 
+  const handleShiftUp = () => {
+    // Shift all dots and barres up by 1 fret (increase fret number)
+    // Don't allow going above fret 24
+    const maxFret = Math.max(
+      ...selectedDots.map((d) => d.fret),
+      ...barres.map((b) => b.fret)
+    );
+
+    if (maxFret < 24) {
+      const newMaxFret = maxFret + 1;
+
+      setSelectedDots((prev) =>
+        prev.map((dot) => ({ ...dot, fret: dot.fret + 1 }))
+      );
+      setBarres((prev) =>
+        prev.map((barre) => ({ ...barre, fret: barre.fret + 1 }))
+      );
+      setFingerNumbers((prev) => {
+        const newMap = new Map();
+        prev.forEach((value, key) => {
+          if (key.startsWith('barre-')) {
+            // Barre key format: barre-{fret}-{startString}-{endString}
+            const parts = key.split('-');
+            const fret = parts[1];
+            const startString = parts[2];
+            const endString = parts[3];
+            if (fret && startString && endString) {
+              const newKey = `barre-${parseInt(fret, 10) + 1}-${startString}-${endString}`;
+              newMap.set(newKey, value);
+            }
+          } else {
+            // Dot key format: {string}-{fret}
+            const parts = key.split('-');
+            const string = parts[0];
+            const fret = parts[1];
+            if (string && fret) {
+              const newKey = `${string}-${parseInt(fret, 10) + 1}`;
+              newMap.set(newKey, value);
+            }
+          }
+        });
+        return newMap;
+      });
+
+      // Auto-adjust startingFret if chord goes out of view
+      const viewEndFret = startingFret + numberOfFrets - 1;
+      if (newMaxFret > viewEndFret) {
+        // Keep 1 fret buffer above the highest note
+        const newStartingFret = Math.min(newMaxFret - numberOfFrets + 2, 20);
+        setStartingFret(Math.max(1, newStartingFret));
+      }
+    }
+  };
+
+  const handleShiftDown = () => {
+    // Shift all dots and barres down by 1 fret (decrease fret number)
+    // Don't allow going below fret 1
+    const minFret = Math.min(
+      ...selectedDots.map((d) => d.fret),
+      ...barres.map((b) => b.fret)
+    );
+
+    if (minFret > 1) {
+      const newMinFret = minFret - 1;
+
+      setSelectedDots((prev) =>
+        prev.map((dot) => ({ ...dot, fret: dot.fret - 1 }))
+      );
+      setBarres((prev) =>
+        prev.map((barre) => ({ ...barre, fret: barre.fret - 1 }))
+      );
+      setFingerNumbers((prev) => {
+        const newMap = new Map();
+        prev.forEach((value, key) => {
+          if (key.startsWith('barre-')) {
+            // Barre key format: barre-{fret}-{startString}-{endString}
+            const parts = key.split('-');
+            const fret = parts[1];
+            const startString = parts[2];
+            const endString = parts[3];
+            if (fret && startString && endString) {
+              const newKey = `barre-${parseInt(fret, 10) - 1}-${startString}-${endString}`;
+              newMap.set(newKey, value);
+            }
+          } else {
+            // Dot key format: {string}-{fret}
+            const parts = key.split('-');
+            const string = parts[0];
+            const fret = parts[1];
+            if (string && fret) {
+              const newKey = `${string}-${parseInt(fret, 10) - 1}`;
+              newMap.set(newKey, value);
+            }
+          }
+        });
+        return newMap;
+      });
+
+      // Auto-adjust startingFret if chord goes out of view
+      if (newMinFret < startingFret) {
+        // Keep 1 fret buffer below the lowest note
+        const newStartingFret = newMinFret - 1;
+        setStartingFret(Math.max(1, newStartingFret));
+      }
+    }
+  };
+
   // Detect chord based on current fretboard state
   const { notes, primaryChord } = useChordDetection(
     selectedDots,
@@ -223,6 +333,8 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
         startingFret={startingFret}
         onStartingFretChange={setStartingFret}
         onReset={handleResetPress}
+        onShiftUp={handleShiftUp}
+        onShiftDown={handleShiftDown}
       />
       <Svg
         width={gridWidth + 40 /* extra space for fret position label */}
@@ -262,6 +374,65 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
             />
           );
         })}
+
+        {/* Fret markers (traditional guitar position dots) */}
+        {showFretMarkers &&
+          Array.from({ length: numberOfFrets }).map((_, i) => {
+            const fretNumber = startingFret + i;
+            const markerFrets = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
+            const doubleDotFrets = [12, 24];
+
+            if (!markerFrets.includes(fretNumber)) return null;
+
+            const y =
+              VERTICAL_MARGIN + dotRadius + (i + 0.5) * horizontalSpacing;
+            const markerRadius = dotRadius * 0.4; // Subtle size
+
+            if (doubleDotFrets.includes(fretNumber)) {
+              // Double dots for 12th and 24th fret
+              const leftX =
+                HORIZONTAL_MARGIN +
+                ((numberOfStrings - 1) / 2 - 0.7) * verticalSpacing;
+              const rightX =
+                HORIZONTAL_MARGIN +
+                ((numberOfStrings - 1) / 2 + 0.7) * verticalSpacing;
+
+              return (
+                <React.Fragment key={`marker-${i}`}>
+                  <Circle
+                    cx={leftX}
+                    cy={y}
+                    r={markerRadius}
+                    fill="#d0d0d0"
+                    opacity={0.5}
+                  />
+                  <Circle
+                    cx={rightX}
+                    cy={y}
+                    r={markerRadius}
+                    fill="#d0d0d0"
+                    opacity={0.5}
+                  />
+                </React.Fragment>
+              );
+            } else {
+              // Single dot for other marker frets
+              const centerX =
+                HORIZONTAL_MARGIN +
+                ((numberOfStrings - 1) / 2) * verticalSpacing;
+
+              return (
+                <Circle
+                  key={`marker-${i}`}
+                  cx={centerX}
+                  cy={y}
+                  r={markerRadius}
+                  fill="#d0d0d0"
+                  opacity={0.5}
+                />
+              );
+            }
+          })}
 
         {/* Barres (render before dots) */}
         {barres.map((barre, idx) => {
@@ -347,8 +518,8 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
                 const barreKey = getBarreKey(barreThatIncludesDot);
                 setFingerNumbers((prev) => {
                   const newMap = new Map(prev);
-                  const current = newMap.get(barreKey) || 0;
-                  if (current >= 4) {
+                  const currentAssignedFingerNum = newMap.get(barreKey) || 0;
+                  if (currentAssignedFingerNum >= 4) {
                     // Remove barre
                     newMap.delete(barreKey);
                     setBarres((prevBarres) =>
@@ -366,7 +537,7 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
                       )
                     );
                   } else {
-                    newMap.set(barreKey, current + 1);
+                    newMap.set(barreKey, currentAssignedFingerNum + 1);
                   }
                   return newMap;
                 });
