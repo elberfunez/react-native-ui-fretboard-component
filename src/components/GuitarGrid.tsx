@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import Svg, { Line, Circle, Text, Rect } from 'react-native-svg';
 import type { FingerPosition } from '../types/FingerPosition';
 import type { Barre } from '../types/Barre';
 import GuitarGridEditorControls from './GuitarGridEditorControls';
+import ChordLabel from './ChordLabel';
+import { useChordDetection } from '../hooks/useChordDetection';
 
 interface GuitarGridProps {
   numberOfStrings?: number;
@@ -64,7 +66,7 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
     new Map()
   );
   const [stringStates, setStringStates] = useState<Array<'X' | 'O'>>(
-    Array(numberOfStrings).fill('O') // Default to open strings
+    Array(numberOfStrings).fill('O') // Default to open strings (empty fretboard)
   );
   const [barres, setBarres] = useState<Barre[]>([]);
   const [barreInProgress, setBarreInProgress] = useState<{
@@ -193,8 +195,16 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
     setStringStates(Array(numberOfStrings).fill('O'));
   };
 
+  // Detect chord based on current fretboard state
+  const { notes, primaryChord } = useChordDetection(
+    selectedDots,
+    stringStates,
+    barres
+  );
+
   return (
-    <View style={{ alignItems: 'center' }}>
+    <View style={styles.container}>
+      <ChordLabel chordName={primaryChord} notes={notes} />
       <GuitarGridEditorControls
         onAddBarres={handleAddBarresPress}
         isAddingBarres={isAddingBarres}
@@ -234,7 +244,7 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
               x2={gridWidth - HORIZONTAL_MARGIN}
               y2={y}
               stroke="black"
-              strokeWidth={i === 0 && showNut ? 4 : 2}
+              strokeWidth={i === 0 && showNut ? 8 : 2}
             />
           );
         })}
@@ -284,29 +294,13 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
           );
         })}
 
-        {/* Highlight for barre in progress */}
-        {barreInProgress && (
-          <Circle
-            cx={
-              HORIZONTAL_MARGIN +
-              (barreInProgress.startString - 1) * verticalSpacing
-            }
-            cy={
-              VERTICAL_MARGIN +
-              dotRadius +
-              (barreInProgress.fret - 0.5) * horizontalSpacing
-            }
-            r={dotRadius * 1.2}
-            fill="none"
-            stroke="blue"
-            strokeWidth={2}
-          />
-        )}
-
         {/* Clickable dots */}
         {Array.from({ length: numberOfStrings }).map((__, s) =>
           Array.from({ length: numberOfFrets }).map((_, f) => {
-            const dot: FingerPosition = { string: s + 1, fret: f + 1 };
+            const dot: FingerPosition = {
+              string: numberOfStrings - s,
+              fret: f + 1,
+            };
             const cx = HORIZONTAL_MARGIN + s * verticalSpacing;
             const cy =
               VERTICAL_MARGIN + dotRadius + (f + 0.5) * horizontalSpacing;
@@ -320,6 +314,12 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
                 dot.string >= b.startString &&
                 dot.string <= b.endString
             );
+
+            // Check if this is the barre in progress start position
+            const isBarreStartPosition =
+              barreInProgress &&
+              barreInProgress.fret === dot.fret &&
+              barreInProgress.startString === dot.string;
 
             const handleDotOrBarrePress = () => {
               if (barreThatIncludesDot) {
@@ -358,6 +358,15 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
 
             return (
               <React.Fragment key={`dot-${s}-${f}`}>
+                {/* Larger invisible touch target */}
+                <Circle
+                  cx={cx}
+                  cy={cy}
+                  r={dotRadius * 2}
+                  fill="transparent"
+                  onPress={handleDotOrBarrePress}
+                />
+                {/* Visible dot */}
                 <Circle
                   cx={cx}
                   cy={cy}
@@ -369,8 +378,9 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
                         ? 'black'
                         : 'transparent'
                   }
-                  stroke="none"
-                  onPress={handleDotOrBarrePress}
+                  stroke={isBarreStartPosition ? '#007AFF' : 'none'}
+                  strokeWidth={isBarreStartPosition ? 3 : 0}
+                  pointerEvents="none"
                 />
                 {/* Show finger number if assigned and not part of barre */}
                 {fingerNumber && !barreThatIncludesDot && (
@@ -476,5 +486,11 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+  },
+});
 
 export default GuitarGrid;
