@@ -3,16 +3,15 @@ import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 
 interface GuitarGridEditorControlsProps {
   isEditingFingers?: boolean;
-  onToggleEditFingers?: (isEditing: boolean) => void;
+  onEditFingers?: () => void;
 }
 
 const GuitarGridEditorControls: React.FC<GuitarGridEditorControlsProps> = ({
   isEditingFingers = false,
-  onToggleEditFingers = (isEditing) =>
-    console.log('Edit Fingers toggled:', isEditing),
+  onEditFingers = () => console.log('Edit Fingers pressed'),
 }) => {
   const handlePress = () => {
-    onToggleEditFingers(!isEditingFingers);
+    onEditFingers();
   };
 
   return (

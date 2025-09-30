@@ -59,23 +59,57 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
   );
 
   const [selectedDots, setSelectedDots] = useState<FingerPosition[]>([]);
+  const [fingerNumbers, setFingerNumbers] = useState<Map<string, number>>(
+    new Map()
+  );
   const [stringStates, setStringStates] = useState<Array<'X' | 'O'>>(
     Array(numberOfStrings).fill('O') // Default to open strings
   );
+  const [isEditingFingers, setIsEditingFingers] = useState(false);
+
+  const getDotKey = (dot: FingerPosition) => `${dot.string}-${dot.fret}`;
 
   const handleDotPress = (dot: FingerPosition) => {
-    setSelectedDots((prev) => {
-      const exists = prev.some(
-        (d) => d.string === dot.string && d.fret === dot.fret
-      );
-      if (exists) {
-        return prev.filter(
-          (d) => !(d.string === dot.string && d.fret === dot.fret)
-        );
-      } else {
-        return [...prev, dot];
+    if (isEditingFingers) {
+      // In edit mode, cycle finger numbers 1-4, then remove
+      const key = getDotKey(dot);
+      setFingerNumbers((prev) => {
+        const newMap = new Map(prev);
+        const current = newMap.get(key) || 0;
+        if (current >= 4) {
+          newMap.delete(key);
+        } else {
+          newMap.set(key, current + 1);
+        }
+        return newMap;
+      });
+
+      // Make sure the dot is selected if assigning a finger number
+      if (!isSelected(dot) && (fingerNumbers.get(key) || 0) < 4) {
+        setSelectedDots((prev) => [...prev, dot]);
       }
-    });
+    } else {
+      // Normal mode: toggle dot selection
+      setSelectedDots((prev) => {
+        const exists = prev.some(
+          (d) => d.string === dot.string && d.fret === dot.fret
+        );
+        if (exists) {
+          // Remove finger number when removing dot
+          const key = getDotKey(dot);
+          setFingerNumbers((prevNumbers) => {
+            const newMap = new Map(prevNumbers);
+            newMap.delete(key);
+            return newMap;
+          });
+          return prev.filter(
+            (d) => !(d.string === dot.string && d.fret === dot.fret)
+          );
+        } else {
+          return [...prev, dot];
+        }
+      });
+    }
   };
 
   const toggleStringState = (index: number) => {
@@ -94,9 +128,16 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
   const isSelected = (dot: FingerPosition) =>
     selectedDots.some((d) => d.string === dot.string && d.fret === dot.fret);
 
+  const handleEditFingersPress = () => {
+    setIsEditingFingers(!isEditingFingers);
+  };
+
   return (
     <View>
-      <GuitarGridEditorControls />
+      <GuitarGridEditorControls
+        onEditFingers={handleEditFingersPress}
+        isEditingFingers={isEditingFingers}
+      />
       <Svg
         width={gridWidth}
         height={
@@ -143,16 +184,34 @@ const GuitarGrid: React.FC<GuitarGridProps> = (props) => {
             const cx = HORIZONTAL_MARGIN + s * verticalSpacing;
             const cy =
               VERTICAL_MARGIN + dotRadius + (f + 0.5) * horizontalSpacing;
+            const dotKey = getDotKey(dot);
+            const fingerNumber = fingerNumbers.get(dotKey);
+
             return (
-              <Circle
-                key={`dot-${s}-${f}`}
-                cx={cx}
-                cy={cy}
-                r={dotRadius}
-                fill={isSelected(dot) ? 'black' : 'transparent'}
-                stroke="none"
-                onPress={() => handleDotPress(dot)}
-              />
+              <React.Fragment key={`dot-${s}-${f}`}>
+                <Circle
+                  cx={cx}
+                  cy={cy}
+                  r={dotRadius}
+                  fill={isSelected(dot) ? 'black' : 'transparent'}
+                  stroke="none"
+                  onPress={() => handleDotPress(dot)}
+                />
+                {/* Show finger number if assigned */}
+                {fingerNumber && (
+                  <Text
+                    x={cx}
+                    y={cy + dotRadius * 0.4}
+                    fontSize={dotRadius * 1.3}
+                    fontWeight="bold"
+                    fill="white"
+                    textAnchor="middle"
+                    pointerEvents="none"
+                  >
+                    {fingerNumber}
+                  </Text>
+                )}
+              </React.Fragment>
             );
           })
         )}
