@@ -1,16 +1,19 @@
 # react-native-ui-fretboard-component
 
-A customizable guitar fretboard UI component for React Native and Expo. Features both interactive chord editing and static chord display modes.
+A customizable guitar fretboard UI component for React Native and Expo. Features both interactive chord editing and static chord display modes with built-in dark mode support and automatic chord detection.
 
 ## Features
 
 - 🎸 **Interactive Chord Editor** - Create and edit guitar chords with finger positions
 - 📊 **Static Chord Display** - Show saved chords in your app
-- 🎯 **Fret Markers** - Traditional guitar position dots (3rd, 5th, 7th frets, etc.)
+- 🎯 **Fret Markers** - Traditional guitar position dots (3rd, 5th, 7th, 9th, 12th frets, etc.)
 - 🔢 **Finger Numbers** - Visual finger position indicators (1-4)
-- 🎼 **Barre Chords** - Support for barre chord notation
+- 🎼 **Barre Chords** - Support for barre chord notation with easy segmented control
 - 📏 **Chord Shifting** - Move chord shapes up and down the fretboard
-- 🎨 **Customizable** - Control size, colors, and display options
+- 🎵 **Chord Detection** - Automatic chord name recognition using Tonal.js
+- 🌓 **Dark Mode** - Built-in light/dark/auto theme support
+- 📐 **Size Presets** - Small, medium, large sizes with responsive scaling
+- 🎨 **Customizable** - Control themes, colors, fonts, and display options
 - 💾 **Serializable Data** - Easy to save/load chord data from databases
 
 ## Installation
@@ -38,9 +41,10 @@ function ChordBuilder() {
   return (
     <GuitarFretboardEditor
       onChordChange={handleChordChange}
+      theme="light"
+      size="medium"
       showFretMarkers={true}
-      gridWidth={250}
-      gridHeight={300}
+      showChordDetection={true}
     />
   );
 }
@@ -70,8 +74,8 @@ function SongChords() {
   return (
     <GuitarFretboardDisplay
       chord={cMajorChord}
-      width={150}
-      height={200}
+      theme="light"
+      size="small"
       showChordName={true}
       compact={true}
     />
@@ -87,28 +91,36 @@ function SongChords() {
 |------|------|---------|-------------|
 | `initialChord` | `ChordData` | `undefined` | Load existing chord for editing |
 | `onChordChange` | `(chord: ChordData) => void` | `undefined` | Callback fired when chord changes |
+| `theme` | `'light' \| 'dark' \| 'auto' \| FretboardTheme` | `'light'` | Color theme (auto follows system) |
+| `size` | `'small' \| 'medium' \| 'large' \| Size` | `'medium'` | Size preset or custom dimensions |
+| `fontFamily` | `string` | `undefined` | Custom font family for text |
+| `showControls` | `boolean` | `true` | Show editor controls (mode, clear, reset) |
+| `showChordDetection` | `boolean` | `true` | Show detected chord name |
+| `showFretMarkers` | `boolean` | `true` | Show traditional fret markers |
+| `showNut` | `boolean` | `true` | Show thick nut line at fret 1 |
+| `defaultStartingFret` | `number` | `1` | Initial starting fret |
 | `numberOfStrings` | `number` | `6` | Number of guitar strings |
 | `numberOfFrets` | `number` | `5` | Number of visible frets |
-| `gridWidth` | `number` | `200` | Width in pixels |
-| `gridHeight` | `number` | `250` | Height in pixels |
-| `showNut` | `boolean` | `true` | Show thick nut line at fret 1 |
-| `dotRadius` | `number` | `12` | Size of finger position dots |
-| `showFretMarkers` | `boolean` | `true` | Show traditional fret markers |
-| `defaultStartingFret` | `number` | `1` | Initial starting fret |
+| `gridWidth` | `number` | `200` | Width (legacy, use `size` instead) |
+| `gridHeight` | `number` | `250` | Height (legacy, use `size` instead) |
+| `dotRadius` | `number` | auto | Dot size (auto-scales with size) |
 
 ### GuitarFretboardDisplay Props
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `chord` | `ChordData` | **required** | The chord to display |
-| `width` | `number` | `200` | Width in pixels |
-| `height` | `number` | `250` | Height in pixels |
-| `showFretMarkers` | `boolean` | `true` | Show traditional fret markers |
+| `theme` | `'light' \| 'dark' \| 'auto' \| FretboardTheme` | `'light'` | Color theme (auto follows system) |
+| `size` | `'small' \| 'medium' \| 'large' \| Size` | `'medium'` | Size preset or custom dimensions |
+| `fontFamily` | `string` | `undefined` | Custom font family for text |
 | `showChordName` | `boolean` | `true` | Display chord name above diagram |
+| `showFretMarkers` | `boolean` | `true` | Show traditional fret markers |
 | `showNut` | `boolean` | `true` | Show thick nut line at fret 1 |
 | `compact` | `boolean` | `false` | Use smaller sizing for inline display |
 | `numberOfStrings` | `number` | `6` | Number of guitar strings |
 | `numberOfFrets` | `number` | `5` | Number of visible frets |
+| `width` | `number` | `200` | Width (legacy, use `size` instead) |
+| `height` | `number` | `250` | Height (legacy, use `size` instead) |
 
 ### ChordData Type
 
@@ -129,6 +141,40 @@ interface ChordData {
 
 ## Examples
 
+### Dark Mode Support
+
+```tsx
+import { useColorScheme } from 'react-native';
+
+function MyChordEditor() {
+  return (
+    <GuitarFretboardEditor
+      theme="auto" // Follows system theme
+      size="medium"
+      onChordChange={handleSave}
+    />
+  );
+}
+```
+
+### Custom Theme
+
+```tsx
+import type { FretboardTheme } from 'react-native-ui-fretboard-component';
+
+const customTheme: FretboardTheme = {
+  fretboard: {
+    stringColor: '#FF6B6B',
+    fretColor: '#4ECDC4',
+    nutColor: '#FFE66D',
+    backgroundColor: '#1A1A2E'
+  },
+  // ... other theme colors
+};
+
+<GuitarFretboardEditor theme={customTheme} />
+```
+
 ### Save Chord to Database
 
 ```tsx
@@ -143,7 +189,7 @@ interface ChordData {
 />
 ```
 
-### Display Multiple Chords
+### Display Multiple Chords with Size Presets
 
 ```tsx
 <ScrollView horizontal>
@@ -151,9 +197,8 @@ interface ChordData {
     <GuitarFretboardDisplay
       key={chord.id}
       chord={chord.data}
+      size="small"
       compact={true}
-      width={120}
-      height={150}
     />
   ))}
 </ScrollView>
@@ -165,6 +210,7 @@ interface ChordData {
 <GuitarFretboardEditor
   initialChord={existingChord}
   onChordChange={(updated) => updateChord(chordId, updated)}
+  showChordDetection={true}
 />
 ```
 

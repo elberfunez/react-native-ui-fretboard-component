@@ -6,3 +6,5 @@ export { default as GuitarFretboardDisplay } from './components/GuitarFretboardD
 export type { ChordData } from './types/ChordData';
 export type { FingerPosition } from './types/FingerPosition';
 export type { Barre } from './types/Barre';
+export type { FretboardTheme, ThemePreset } from './types/Theme';
+export type { SizePreset, SizePresetName } from './types/SizePresets';
