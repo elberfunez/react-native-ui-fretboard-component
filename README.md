@@ -2,6 +2,10 @@
 
 A customizable guitar fretboard UI component for React Native and Expo. Features both interactive chord editing and static chord display modes with built-in dark mode support and automatic chord detection.
 
+## Demo
+
+Try it live: **[Expo Snack Demo](https://snack.expo.dev/@elberfunez/example-guitar-fretboard-editor-)**
+
 ## Features
 
 - 🎸 **Interactive Chord Editor** - Create and edit guitar chords with finger positions
