@@ -19,6 +19,8 @@ interface GuitarGridEditorControlsProps {
   onShiftUp?: () => void;
   onShiftDown?: () => void;
   fontFamily?: string;
+  isChordOutOfView?: boolean;
+  onRecenter?: () => void;
 }
 
 const GuitarGridEditorControls: React.FC<GuitarGridEditorControlsProps> = ({
@@ -31,6 +33,8 @@ const GuitarGridEditorControls: React.FC<GuitarGridEditorControlsProps> = ({
   onShiftUp = () => console.log('Shift Up pressed'),
   onShiftDown = () => console.log('Shift Down pressed'),
   fontFamily,
+  isChordOutOfView = false,
+  onRecenter = () => console.log('Recenter pressed'),
 }) => {
   const handleClearPress = () => {
     onClear();
@@ -61,6 +65,22 @@ const GuitarGridEditorControls: React.FC<GuitarGridEditorControlsProps> = ({
 
   return (
     <View style={styles.mainContainer}>
+      {/* Warning for out-of-view chord */}
+      {isChordOutOfView && (
+        <View style={styles.warningContainer}>
+          <Text style={[styles.warningText, fontFamily && { fontFamily }]}>
+            ⚠️ Chord is not visible in current view
+          </Text>
+          <TouchableOpacity style={styles.recenterButton} onPress={onRecenter}>
+            <Text
+              style={[styles.recenterButtonText, fontFamily && { fontFamily }]}
+            >
+              Recenter Chord
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Fret Position Control */}
       <View style={styles.fretControlContainer}>
         <Text style={[styles.fretLabel, fontFamily && { fontFamily }]}>
@@ -192,14 +212,14 @@ const GuitarGridEditorControls: React.FC<GuitarGridEditorControlsProps> = ({
             <Text
               style={[styles.shiftButtonText, fontFamily && { fontFamily }]}
             >
-              ↓
+              ↑
             </Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.shiftButton} onPress={onShiftUp}>
             <Text
               style={[styles.shiftButtonText, fontFamily && { fontFamily }]}
             >
-              ↑
+              ↓
             </Text>
           </TouchableOpacity>
         </View>
@@ -377,6 +397,36 @@ const styles = StyleSheet.create({
   },
   segmentTextActive: {
     color: 'white',
+  },
+  warningContainer: {
+    backgroundColor: '#fff3cd',
+    borderWidth: 1,
+    borderColor: '#ffc107',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    alignItems: 'center',
+    width: '100%',
+  },
+  warningText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#856404',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  recenterButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    backgroundColor: '#ffc107',
+    borderWidth: 1,
+    borderColor: '#d39e00',
+  },
+  recenterButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#856404',
   },
 });
 

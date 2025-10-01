@@ -417,9 +417,57 @@ const GuitarFretboardEditor: React.FC<GuitarFretboardEditorProps> = (props) => {
     barres
   );
 
+  // Check if chord is visible within current viewport
+  const isChordVisible = useMemo(() => {
+    if (selectedDots.length === 0 && barres.length === 0) {
+      return true; // No chord to display
+    }
+
+    const allFrets = [
+      ...selectedDots.map((d) => d.fret),
+      ...barres.map((b) => b.fret),
+    ];
+
+    const minChordFret = Math.min(...allFrets);
+    const maxChordFret = Math.max(...allFrets);
+    const viewEndFret = startingFret + numberOfFrets - 1;
+
+    // Chord is visible if it's within the viewport
+    return minChordFret >= startingFret && maxChordFret <= viewEndFret;
+  }, [selectedDots, barres, startingFret, numberOfFrets]);
+
+  // Recenter the viewport to show the chord
+  const handleRecenter = () => {
+    if (selectedDots.length === 0 && barres.length === 0) {
+      return;
+    }
+
+    const allFrets = [
+      ...selectedDots.map((d) => d.fret),
+      ...barres.map((b) => b.fret),
+    ];
+
+    const minChordFret = Math.min(...allFrets);
+    const maxChordFret = Math.max(...allFrets);
+
+    // Center the view on the chord position
+    const chordCenter = Math.floor((minChordFret + maxChordFret) / 2);
+    const newStartingFret = Math.max(
+      1,
+      chordCenter - Math.floor(numberOfFrets / 2)
+    );
+
+    setStartingFret(Math.min(newStartingFret, 20));
+  };
+
+  const hasSelections =
+    selectedDots.length > 0 ||
+    barres.length > 0 ||
+    stringStates.some((state) => state === 'X');
+
   return (
     <View style={styles.container}>
-      {showChordDetection && (
+      {showChordDetection && hasSelections && (
         <ChordLabel
           chordName={primaryChord}
           notes={notes}
@@ -438,6 +486,8 @@ const GuitarFretboardEditor: React.FC<GuitarFretboardEditorProps> = (props) => {
           onShiftUp={handleShiftUp}
           onShiftDown={handleShiftDown}
           fontFamily={fontFamily}
+          isChordOutOfView={!isChordVisible}
+          onRecenter={handleRecenter}
         />
       )}
       <GuitarFretboardRenderer
