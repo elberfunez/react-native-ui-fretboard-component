@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import Svg, { Line, Circle, Text, Rect } from 'react-native-svg';
 import type { FingerPosition } from '../types/FingerPosition';
 import type { Barre } from '../types/Barre';
+import type { FretboardTheme } from '../types/Theme';
 
 interface GuitarFretboardRendererProps {
   // Chord data
@@ -19,6 +20,10 @@ interface GuitarFretboardRendererProps {
   dotRadius: number;
   showNut: boolean;
   showFretMarkers: boolean;
+
+  // Theme & styling
+  theme: FretboardTheme;
+  fontFamily?: string;
 
   // Optional interaction handlers (for editor mode)
   onDotPress?: (dot: FingerPosition) => void;
@@ -40,6 +45,8 @@ const GuitarFretboardRenderer: React.FC<GuitarFretboardRendererProps> = ({
   dotRadius,
   showNut,
   showFretMarkers,
+  theme,
+  fontFamily,
   onDotPress,
   onStringPress,
   barreInProgress,
@@ -79,6 +86,12 @@ const GuitarFretboardRenderer: React.FC<GuitarFretboardRendererProps> = ({
         gridHeight +
         dotRadius * 4 /* extra space for string indicators + string numbers */
       }
+      style={{
+        backgroundColor:
+          theme.fretboard.backgroundColor === 'transparent'
+            ? 'transparent'
+            : theme.fretboard.backgroundColor || 'white',
+      }}
     >
       {/* Vertical lines (strings) */}
       {Array.from({ length: numberOfStrings }).map((_, i) => {
@@ -90,7 +103,7 @@ const GuitarFretboardRenderer: React.FC<GuitarFretboardRendererProps> = ({
             y1={VERTICAL_MARGIN + dotRadius}
             x2={x}
             y2={gridHeight - VERTICAL_MARGIN + dotRadius}
-            stroke="black"
+            stroke={theme.fretboard.stringColor}
             strokeWidth={2}
           />
         );
@@ -106,7 +119,11 @@ const GuitarFretboardRenderer: React.FC<GuitarFretboardRendererProps> = ({
             y1={y}
             x2={gridWidth - HORIZONTAL_MARGIN}
             y2={y}
-            stroke="black"
+            stroke={
+              i === 0 && showNut && startingFret === 1
+                ? theme.fretboard.nutColor
+                : theme.fretboard.fretColor
+            }
             strokeWidth={i === 0 && showNut && startingFret === 1 ? 8 : 2}
           />
         );
@@ -138,15 +155,15 @@ const GuitarFretboardRenderer: React.FC<GuitarFretboardRendererProps> = ({
                   cx={leftX}
                   cy={y}
                   r={markerRadius}
-                  fill="#d0d0d0"
-                  opacity={0.5}
+                  fill={theme.markers.fillColor}
+                  opacity={theme.markers.opacity}
                 />
                 <Circle
                   cx={rightX}
                   cy={y}
                   r={markerRadius}
-                  fill="#d0d0d0"
-                  opacity={0.5}
+                  fill={theme.markers.fillColor}
+                  opacity={theme.markers.opacity}
                 />
               </React.Fragment>
             );
@@ -160,8 +177,8 @@ const GuitarFretboardRenderer: React.FC<GuitarFretboardRendererProps> = ({
                 cx={centerX}
                 cy={y}
                 r={markerRadius}
-                fill="#d0d0d0"
-                opacity={0.5}
+                fill={theme.markers.fillColor}
+                opacity={theme.markers.opacity}
               />
             );
           }
@@ -196,7 +213,7 @@ const GuitarFretboardRenderer: React.FC<GuitarFretboardRendererProps> = ({
               height={dotRadius * 1.6}
               rx={dotRadius * 0.8}
               ry={dotRadius * 0.8}
-              fill="black"
+              fill={theme.dots.barreColor}
             />
             {fingerNumber && (
               <Text
@@ -204,9 +221,10 @@ const GuitarFretboardRenderer: React.FC<GuitarFretboardRendererProps> = ({
                 y={cy + dotRadius * 0.4}
                 fontSize={dotRadius * 1.3}
                 fontWeight="bold"
-                fill="white"
+                fill={theme.dots.barreTextColor}
                 textAnchor="middle"
                 pointerEvents="none"
+                fontFamily={fontFamily}
               >
                 {fingerNumber}
               </Text>
@@ -261,10 +279,14 @@ const GuitarFretboardRenderer: React.FC<GuitarFretboardRendererProps> = ({
                   barreThatIncludesDot
                     ? 'transparent'
                     : isSelected(dot)
-                      ? 'black'
+                      ? theme.dots.fillColor
                       : 'transparent'
                 }
-                stroke={isBarreStartPosition ? '#007AFF' : 'none'}
+                stroke={
+                  isBarreStartPosition
+                    ? theme.dots.barreInProgressColor
+                    : 'none'
+                }
                 strokeWidth={isBarreStartPosition ? 3 : 0}
                 pointerEvents="none"
               />
@@ -274,9 +296,10 @@ const GuitarFretboardRenderer: React.FC<GuitarFretboardRendererProps> = ({
                   y={cy + dotRadius * 0.4}
                   fontSize={dotRadius * 1.3}
                   fontWeight="bold"
-                  fill="white"
+                  fill={theme.dots.textColor}
                   textAnchor="middle"
                   pointerEvents="none"
+                  fontFamily={fontFamily}
                 >
                   {fingerNumber}
                 </Text>
@@ -311,9 +334,10 @@ const GuitarFretboardRenderer: React.FC<GuitarFretboardRendererProps> = ({
                 y={y + 6}
                 fontSize={dotRadius * 1.5}
                 fontWeight="bold"
-                fill="black"
+                fill={theme.stringIndicators.mutedColor}
                 textAnchor="middle"
                 pointerEvents="none"
+                fontFamily={fontFamily}
               >
                 X
               </Text>
@@ -323,10 +347,14 @@ const GuitarFretboardRenderer: React.FC<GuitarFretboardRendererProps> = ({
               <Circle
                 cx={x}
                 cy={y}
-                r={dotRadius * 0.6}
-                fill="white"
-                stroke="black"
-                strokeWidth={2}
+                r={Math.max(dotRadius * 0.6, 8)}
+                fill={
+                  theme.fretboard.backgroundColor === 'transparent'
+                    ? 'white'
+                    : theme.fretboard.backgroundColor
+                }
+                stroke={theme.stringIndicators.openColor}
+                strokeWidth={Math.max(dotRadius * 0.15, 2)}
                 pointerEvents="none"
               />
             )}
@@ -348,8 +376,8 @@ const GuitarFretboardRenderer: React.FC<GuitarFretboardRendererProps> = ({
               y={boxY - boxSize / 2}
               width={boxSize}
               height={boxSize}
-              fill="white"
-              stroke="black"
+              fill={theme.fretboard.backgroundColor || 'white'}
+              stroke={theme.labels.stringNumberColor}
               strokeWidth={1}
             />
             <Text
@@ -357,8 +385,9 @@ const GuitarFretboardRenderer: React.FC<GuitarFretboardRendererProps> = ({
               y={boxY + 4}
               fontSize={dotRadius}
               fontWeight="bold"
-              fill="black"
+              fill={theme.labels.stringNumberColor}
               textAnchor="middle"
+              fontFamily={fontFamily}
             >
               {stringNumber}
             </Text>
@@ -373,8 +402,9 @@ const GuitarFretboardRenderer: React.FC<GuitarFretboardRendererProps> = ({
           y={VERTICAL_MARGIN + dotRadius + 4}
           fontSize={18}
           fontWeight="bold"
-          fill="#333"
+          fill={theme.labels.fretLabelColor}
           textAnchor="start"
+          fontFamily={fontFamily}
         >
           {startingFret}fr
         </Text>

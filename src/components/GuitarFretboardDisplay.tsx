@@ -1,12 +1,21 @@
 import React, { useMemo } from 'react';
 import { View, StyleSheet, Text } from 'react-native';
 import type { ChordData } from '../types/ChordData';
+import type { ThemePreset } from '../types/Theme';
+import type { SizePreset } from '../types/SizePresets';
+import { resolveSize } from '../types/SizePresets';
+import { useTheme } from '../hooks/useTheme';
 import GuitarFretboardRenderer from './GuitarFretboardRenderer';
 
 interface GuitarFretboardDisplayProps {
   chord: ChordData;
+  // Legacy size props (still supported)
   width?: number;
   height?: number;
+  // New props
+  size?: SizePreset;
+  theme?: ThemePreset;
+  fontFamily?: string;
   showFretMarkers?: boolean;
   showChordName?: boolean;
   showNut?: boolean;
@@ -17,8 +26,11 @@ interface GuitarFretboardDisplayProps {
 
 const GuitarFretboardDisplay: React.FC<GuitarFretboardDisplayProps> = ({
   chord,
-  width = 200,
-  height = 250,
+  width: propWidth,
+  height: propHeight,
+  size,
+  theme: themePreset,
+  fontFamily,
   showFretMarkers = true,
   showChordName = true,
   showNut = true,
@@ -26,7 +38,20 @@ const GuitarFretboardDisplay: React.FC<GuitarFretboardDisplayProps> = ({
   numberOfStrings = 6,
   numberOfFrets = 5,
 }) => {
-  const dotRadius = compact ? 10 : 12;
+  // Resolve theme
+  const theme = useTheme(themePreset);
+
+  // Resolve size (prefer size prop, fallback to width/height)
+  const { width, height } = useMemo(() => {
+    if (size) {
+      return resolveSize(size);
+    }
+    return { width: propWidth || 200, height: propHeight || 250 };
+  }, [size, propWidth, propHeight]);
+
+  // Calculate dotRadius dynamically based on width (6% of width)
+  // This ensures dots scale proportionally with the fretboard size
+  const dotRadius = useMemo(() => Math.round(width * 0.06), [width]);
   const startingFret = chord.startingFret ?? 1;
 
   // Convert chord data to the format expected by renderer
@@ -52,10 +77,19 @@ const GuitarFretboardDisplay: React.FC<GuitarFretboardDisplayProps> = ({
     return map;
   }, [chord]);
 
+  const chordNameColor = theme.labels.chordNameColor;
+
   return (
     <View style={styles.container}>
       {showChordName && chord.name && (
-        <Text style={[styles.chordName, compact && styles.chordNameCompact]}>
+        <Text
+          style={[
+            styles.chordName,
+            compact && styles.chordNameCompact,
+            { color: chordNameColor },
+            fontFamily && { fontFamily },
+          ]}
+        >
           {chord.name}
         </Text>
       )}
@@ -72,6 +106,8 @@ const GuitarFretboardDisplay: React.FC<GuitarFretboardDisplayProps> = ({
         dotRadius={dotRadius}
         showNut={showNut}
         showFretMarkers={showFretMarkers}
+        theme={theme}
+        fontFamily={fontFamily}
         isEditable={false}
       />
     </View>

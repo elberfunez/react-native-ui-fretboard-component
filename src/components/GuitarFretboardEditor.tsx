@@ -3,13 +3,17 @@ import { View, StyleSheet } from 'react-native';
 import type { FingerPosition } from '../types/FingerPosition';
 import type { Barre } from '../types/Barre';
 import type { ChordData } from '../types/ChordData';
+import type { ThemePreset } from '../types/Theme';
+import type { SizePreset } from '../types/SizePresets';
+import { resolveSize } from '../types/SizePresets';
+import { useTheme } from '../hooks/useTheme';
 import GuitarFretboardRenderer from './GuitarFretboardRenderer';
 import GuitarGridEditorControls from './GuitarGridEditorControls';
 import ChordLabel from './ChordLabel';
 import { useChordDetection } from '../hooks/useChordDetection';
 
 interface GuitarFretboardEditorProps {
-  // Visual props
+  // Visual props (legacy - still supported)
   numberOfStrings?: number;
   numberOfFrets?: number;
   gridWidth?: number;
@@ -17,6 +21,15 @@ interface GuitarFretboardEditorProps {
   showNut?: boolean;
   dotRadius?: number;
   showFretMarkers?: boolean;
+
+  // New theme & sizing props
+  theme?: ThemePreset;
+  size?: SizePreset;
+  fontFamily?: string;
+
+  // UI control props
+  showControls?: boolean;
+  showChordDetection?: boolean;
 
   // Data flow props
   initialChord?: ChordData;
@@ -30,9 +43,10 @@ const DEFAULT_CONFIG = {
   gridWidth: 200,
   gridHeight: 250,
   showNut: true,
-  dotRadius: 12,
   showFretMarkers: true,
   defaultStartingFret: 1,
+  showControls: true,
+  showChordDetection: true,
 };
 
 const GuitarFretboardEditor: React.FC<GuitarFretboardEditorProps> = (props) => {
@@ -41,15 +55,38 @@ const GuitarFretboardEditor: React.FC<GuitarFretboardEditorProps> = (props) => {
   const {
     numberOfStrings,
     numberOfFrets,
-    gridWidth,
-    gridHeight,
+    gridWidth: propGridWidth,
+    gridHeight: propGridHeight,
     showNut,
     dotRadius,
     showFretMarkers,
     defaultStartingFret,
     initialChord,
     onChordChange,
+    theme: themePreset,
+    size,
+    fontFamily,
+    showControls,
+    showChordDetection,
   } = config;
+
+  // Resolve theme
+  const theme = useTheme(themePreset);
+
+  // Resolve size (prefer size prop, fallback to width/height)
+  const { width: gridWidth, height: gridHeight } = useMemo(() => {
+    if (size) {
+      return resolveSize(size);
+    }
+    return { width: propGridWidth!, height: propGridHeight! };
+  }, [size, propGridWidth, propGridHeight]);
+
+  // Calculate dotRadius dynamically based on gridWidth (6% of width)
+  // This ensures dots scale proportionally with the fretboard size
+  const calculatedDotRadius = useMemo(
+    () => dotRadius || Math.round(gridWidth * 0.06),
+    [gridWidth, dotRadius]
+  );
 
   // Initialize state from initialChord if provided
   const [selectedDots, setSelectedDots] = useState<FingerPosition[]>(
@@ -86,7 +123,7 @@ const GuitarFretboardEditor: React.FC<GuitarFretboardEditorProps> = (props) => {
   const [startingFret, setStartingFret] = useState(
     initialChord?.startingFret || defaultStartingFret
   );
-  const [isAddingBarres, setIsAddingBarres] = useState(false);
+  const [editMode, setEditMode] = useState<'dots' | 'barres'>('dots');
 
   // Emit chord changes
   useEffect(() => {
@@ -161,7 +198,7 @@ const GuitarFretboardEditor: React.FC<GuitarFretboardEditorProps> = (props) => {
         }
         return newMap;
       });
-    } else if (isAddingBarres) {
+    } else if (editMode === 'barres') {
       // Barre mode: select start and end string on same fret
       if (!barreInProgress) {
         setBarreInProgress({ fret: dot.fret, startString: dot.string });
@@ -255,9 +292,9 @@ const GuitarFretboardEditor: React.FC<GuitarFretboardEditorProps> = (props) => {
     });
   };
 
-  const handleAddBarresPress = () => {
-    setIsAddingBarres(!isAddingBarres);
-    setBarreInProgress(null);
+  const handleEditModeChange = (mode: 'dots' | 'barres') => {
+    setEditMode(mode);
+    setBarreInProgress(null); // Reset barre progress when switching modes
   };
 
   const handleClearPress = () => {
@@ -382,17 +419,27 @@ const GuitarFretboardEditor: React.FC<GuitarFretboardEditorProps> = (props) => {
 
   return (
     <View style={styles.container}>
-      <ChordLabel chordName={primaryChord} notes={notes} />
-      <GuitarGridEditorControls
-        onAddBarres={handleAddBarresPress}
-        isAddingBarres={isAddingBarres}
-        onClear={handleClearPress}
-        startingFret={startingFret}
-        onStartingFretChange={setStartingFret}
-        onReset={handleResetPress}
-        onShiftUp={handleShiftUp}
-        onShiftDown={handleShiftDown}
-      />
+      {showChordDetection && (
+        <ChordLabel
+          chordName={primaryChord}
+          notes={notes}
+          theme={theme}
+          fontFamily={fontFamily}
+        />
+      )}
+      {showControls && (
+        <GuitarGridEditorControls
+          editMode={editMode}
+          onEditModeChange={handleEditModeChange}
+          onClear={handleClearPress}
+          startingFret={startingFret}
+          onStartingFretChange={setStartingFret}
+          onReset={handleResetPress}
+          onShiftUp={handleShiftUp}
+          onShiftDown={handleShiftDown}
+          fontFamily={fontFamily}
+        />
+      )}
       <GuitarFretboardRenderer
         dots={selectedDots}
         barres={barres}
@@ -403,9 +450,11 @@ const GuitarFretboardEditor: React.FC<GuitarFretboardEditorProps> = (props) => {
         numberOfFrets={numberOfFrets}
         gridWidth={gridWidth}
         gridHeight={gridHeight}
-        dotRadius={dotRadius}
+        dotRadius={calculatedDotRadius}
         showNut={showNut}
         showFretMarkers={showFretMarkers}
+        theme={theme}
+        fontFamily={fontFamily}
         onDotPress={handleDotPress}
         onStringPress={toggleStringState}
         barreInProgress={barreInProgress}

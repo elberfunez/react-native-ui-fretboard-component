@@ -7,31 +7,31 @@ import {
   StyleSheet,
 } from 'react-native';
 
+type EditMode = 'dots' | 'barres';
+
 interface GuitarGridEditorControlsProps {
-  isAddingBarres?: boolean;
-  onAddBarres?: () => void;
+  editMode?: EditMode;
+  onEditModeChange?: (mode: EditMode) => void;
   onClear?: () => void;
   startingFret?: number;
   onStartingFretChange?: (fret: number) => void;
   onReset?: () => void;
   onShiftUp?: () => void;
   onShiftDown?: () => void;
+  fontFamily?: string;
 }
 
 const GuitarGridEditorControls: React.FC<GuitarGridEditorControlsProps> = ({
-  isAddingBarres = false,
-  onAddBarres = () => console.log('Add Barres pressed'),
+  editMode = 'dots',
+  onEditModeChange = () => console.log('Edit mode changed'),
   onClear = () => console.log('Clear pressed'),
   startingFret = 1,
   onStartingFretChange = () => console.log('Starting fret changed'),
   onReset = () => console.log('Reset pressed'),
   onShiftUp = () => console.log('Shift Up pressed'),
   onShiftDown = () => console.log('Shift Down pressed'),
+  fontFamily,
 }) => {
-  const handleAddBarresPress = () => {
-    onAddBarres();
-  };
-
   const handleClearPress = () => {
     onClear();
   };
@@ -63,7 +63,9 @@ const GuitarGridEditorControls: React.FC<GuitarGridEditorControlsProps> = ({
     <View style={styles.mainContainer}>
       {/* Fret Position Control */}
       <View style={styles.fretControlContainer}>
-        <Text style={styles.fretLabel}>Starting Fret:</Text>
+        <Text style={[styles.fretLabel, fontFamily && { fontFamily }]}>
+          Starting Fret:
+        </Text>
         <View style={styles.stepperContainer}>
           <TouchableOpacity
             style={[
@@ -73,10 +75,14 @@ const GuitarGridEditorControls: React.FC<GuitarGridEditorControlsProps> = ({
             onPress={handleDecrementFret}
             disabled={startingFret <= 1}
           >
-            <Text style={styles.stepperButtonText}>-</Text>
+            <Text
+              style={[styles.stepperButtonText, fontFamily && { fontFamily }]}
+            >
+              -
+            </Text>
           </TouchableOpacity>
           <TextInput
-            style={styles.fretInput}
+            style={[styles.fretInput, fontFamily && { fontFamily }]}
             value={String(startingFret)}
             onChangeText={handleFretInputChange}
             keyboardType="number-pad"
@@ -90,7 +96,56 @@ const GuitarGridEditorControls: React.FC<GuitarGridEditorControlsProps> = ({
             onPress={handleIncrementFret}
             disabled={startingFret >= 20}
           >
-            <Text style={styles.stepperButtonText}>+</Text>
+            <Text
+              style={[styles.stepperButtonText, fontFamily && { fontFamily }]}
+            >
+              +
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Segmented Control for Edit Mode */}
+      <View style={styles.modeControlContainer}>
+        <Text style={[styles.modeLabel, fontFamily && { fontFamily }]}>
+          Mode:
+        </Text>
+        <View style={styles.segmentedControl}>
+          <TouchableOpacity
+            style={[
+              styles.segment,
+              styles.segmentLeft,
+              editMode === 'dots' && styles.segmentActive,
+            ]}
+            onPress={() => onEditModeChange('dots')}
+          >
+            <Text
+              style={[
+                styles.segmentText,
+                editMode === 'dots' && styles.segmentTextActive,
+                fontFamily && { fontFamily },
+              ]}
+            >
+              Dots
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.segment,
+              styles.segmentRight,
+              editMode === 'barres' && styles.segmentActive,
+            ]}
+            onPress={() => onEditModeChange('barres')}
+          >
+            <Text
+              style={[
+                styles.segmentText,
+                editMode === 'barres' && styles.segmentTextActive,
+                fontFamily && { fontFamily },
+              ]}
+            >
+              Barres
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -98,41 +153,54 @@ const GuitarGridEditorControls: React.FC<GuitarGridEditorControlsProps> = ({
       {/* Button Row */}
       <View style={styles.buttonContainer}>
         <TouchableOpacity
-          style={[styles.button, isAddingBarres && styles.activeButton]}
-          onPress={handleAddBarresPress}
+          style={[styles.button, styles.clearButton]}
+          onPress={handleClearPress}
         >
           <Text
             style={[
               styles.buttonText,
-              isAddingBarres && styles.activeButtonText,
+              styles.clearButtonText,
+              fontFamily && { fontFamily },
             ]}
           >
-            {isAddingBarres ? 'Done' : 'Add Barres'}
+            Clear
           </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.button, styles.clearButton]}
-          onPress={handleClearPress}
-        >
-          <Text style={[styles.buttonText, styles.clearButtonText]}>Clear</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.button, styles.resetButton]}
           onPress={handleResetPress}
         >
-          <Text style={[styles.buttonText, styles.resetButtonText]}>Reset</Text>
+          <Text
+            style={[
+              styles.buttonText,
+              styles.resetButtonText,
+              fontFamily && { fontFamily },
+            ]}
+          >
+            Reset
+          </Text>
         </TouchableOpacity>
       </View>
 
       {/* Shift Chord Shape Controls */}
       <View style={styles.shiftControlContainer}>
-        <Text style={styles.shiftLabel}>Move Shape:</Text>
+        <Text style={[styles.shiftLabel, fontFamily && { fontFamily }]}>
+          Move Shape:
+        </Text>
         <View style={styles.shiftButtonContainer}>
           <TouchableOpacity style={styles.shiftButton} onPress={onShiftDown}>
-            <Text style={styles.shiftButtonText}>↓ Down</Text>
+            <Text
+              style={[styles.shiftButtonText, fontFamily && { fontFamily }]}
+            >
+              ↓
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.shiftButton} onPress={onShiftUp}>
-            <Text style={styles.shiftButtonText}>↑ Up</Text>
+            <Text
+              style={[styles.shiftButtonText, fontFamily && { fontFamily }]}
+            >
+              ↑
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -263,6 +331,52 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: '#28a745',
+  },
+  modeControlContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  modeLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginRight: 12,
+  },
+  segmentedControl: {
+    flexDirection: 'row',
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  segment: {
+    paddingVertical: 8,
+    paddingHorizontal: 24,
+    backgroundColor: 'white',
+    minWidth: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  segmentLeft: {
+    borderRightWidth: 0.5,
+    borderRightColor: '#007AFF',
+  },
+  segmentRight: {
+    borderLeftWidth: 0.5,
+    borderLeftColor: '#007AFF',
+  },
+  segmentActive: {
+    backgroundColor: '#007AFF',
+  },
+  segmentText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  segmentTextActive: {
+    color: 'white',
   },
 });
 
